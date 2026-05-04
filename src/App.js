@@ -170,34 +170,34 @@ export default function App() {
     navigator.clipboard.writeText(lines).then(() => showToast("Order copied!"));
   };
 
-  const fs = 16;
+  const fs = 20;
   const s = {
-    wrap: { fontFamily: "system-ui, sans-serif", width: "100%", maxWidth: "100vw", margin: 0, paddingBottom: 80, boxSizing: "border-box", overflowX: "hidden" },
-    header: { padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" },
-    title: { fontSize: 24, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 },
-    sub: { fontSize: fs, color: "var(--color-text-secondary)", marginTop: 4 },
+    wrap: { fontFamily: "system-ui, sans-serif", width: "100%", maxWidth: "100vw", margin: 0, paddingBottom: 100, boxSizing: "border-box", overflowX: "hidden" },
+    header: { padding: "28px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" },
+    title: { fontSize: 32, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 },
+    sub: { fontSize: fs, color: "var(--color-text-secondary)", marginTop: 6 },
     nav: { position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--color-background-primary)", borderTop: "0.5px solid var(--color-border-tertiary)", display: "flex", zIndex: 10 },
-    navBtn: (a) => ({ flex: 1, padding: "12px 0 10px", border: "none", background: "none", cursor: "pointer", fontSize: 12, color: a ? "#185FA5" : "var(--color-text-secondary)", fontWeight: a ? 700 : 400, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }),
-    navDot: { width: 6, height: 6, borderRadius: "50%", background: "#E24B4A" },
-    input: { flex: 1, padding: "12px 14px", borderRadius: 12, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)" },
-    chip: (a) => ({ padding: "8px 16px", borderRadius: 20, border: "0.5px solid " + (a ? "#185FA5" : "var(--color-border-tertiary)"), background: a ? "#E6F1FB" : "var(--color-background-secondary)", color: a ? "#185FA5" : "var(--color-text-secondary)", fontSize: 14, cursor: "pointer", whiteSpace: "nowrap", fontWeight: a ? 700 : 400 }),
-    card: { background: "var(--color-background-primary)", borderRadius: 16, border: "0.5px solid var(--color-border-tertiary)", padding: "16px", margin: "0 20px 12px" },
-    badge: (c) => ({ fontSize: 13, padding: "4px 10px", borderRadius: 20, background: c + "22", color: c, fontWeight: 700 }),
-    qtyBtn: { width: 40, height: 40, borderRadius: 10, border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-secondary)", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-primary)" },
-    bigBtn: { width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "#185FA5", color: "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", marginTop: 14 },
+    navBtn: (a) => ({ flex: 1, padding: "16px 0 14px", border: "none", background: "none", cursor: "pointer", fontSize: 14, color: a ? "#185FA5" : "var(--color-text-secondary)", fontWeight: a ? 700 : 400, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }),
+    navDot: { width: 7, height: 7, borderRadius: "50%", background: "#E24B4A" },
+    input: { flex: 1, padding: "16px 18px", borderRadius: 14, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)" },
+    chip: (a) => ({ padding: "10px 20px", borderRadius: 24, border: "0.5px solid " + (a ? "#185FA5" : "var(--color-border-tertiary)"), background: a ? "#E6F1FB" : "var(--color-background-secondary)", color: a ? "#185FA5" : "var(--color-text-secondary)", fontSize: 17, cursor: "pointer", whiteSpace: "nowrap", fontWeight: a ? 700 : 400 }),
+    card: { background: "var(--color-background-primary)", borderRadius: 18, border: "0.5px solid var(--color-border-tertiary)", padding: "20px", margin: "0 20px 14px" },
+    badge: (c) => ({ fontSize: 16, padding: "6px 14px", borderRadius: 24, background: c + "22", color: c, fontWeight: 700 }),
+    qtyBtn: { width: 52, height: 52, borderRadius: 14, border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-secondary)", cursor: "pointer", fontSize: 28, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-primary)" },
+    bigBtn: { width: "100%", padding: "20px", borderRadius: 16, border: "none", background: "#185FA5", color: "#fff", fontSize: 20, fontWeight: 700, cursor: "pointer", marginTop: 16 },
     modal: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "flex-end" },
-    modalBox: { width: "100%", background: "var(--color-background-primary)", borderRadius: "20px 20px 0 0", padding: "24px 20px 48px" },
-    label: { fontSize: 14, color: "var(--color-text-secondary)", marginBottom: 6, display: "block" },
-    formInput: { width: "100%", padding: "12px 14px", borderRadius: 12, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)", boxSizing: "border-box", marginBottom: 12 },
-    toast: { position: "fixed", top: 24, left: "50%", transform: "translateX(-50%)", background: "#185FA5", color: "#fff", padding: "12px 24px", borderRadius: 28, fontSize: 15, fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" },
-    sectionTitle: { fontSize: 14, fontWeight: 700, color: "var(--color-text-secondary)", padding: "16px 20px 8px", textTransform: "uppercase", letterSpacing: "0.05em" },
+    modalBox: { width: "100%", background: "var(--color-background-primary)", borderRadius: "24px 24px 0 0", padding: "28px 20px 56px" },
+    label: { fontSize: 17, color: "var(--color-text-secondary)", marginBottom: 8, display: "block" },
+    formInput: { width: "100%", padding: "16px 18px", borderRadius: 14, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)", boxSizing: "border-box", marginBottom: 14 },
+    toast: { position: "fixed", top: 28, left: "50%", transform: "translateX(-50%)", background: "#185FA5", color: "#fff", padding: "14px 28px", borderRadius: 32, fontSize: 18, fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" },
+    sectionTitle: { fontSize: 17, fontWeight: 700, color: "var(--color-text-secondary)", padding: "20px 20px 10px", textTransform: "uppercase", letterSpacing: "0.05em" },
   };
 
   const navIcons = {
-    Inventory: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
-    Scan: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>,
-    Order: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
-    Vendors: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    Inventory: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+    Scan: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>,
+    Order: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+    Vendors: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   };
 
   return (
