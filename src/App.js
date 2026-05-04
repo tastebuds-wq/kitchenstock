@@ -82,37 +82,19 @@ function ScannerScreen({ items, vendors, onUpdateQty, onAddItem }) {
     log("Requesting camera...");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
       });
       streamRef.current = stream;
-      log("Camera granted");
+      log("Camera granted — loading ZXing scanner...");
       const v = videoRef.current;
       if (!v) { log("ERROR: video ref missing"); return; }
       v.srcObject = stream;
-      await v.play();
-      log(`Video playing: ${v.videoWidth}x${v.videoHeight}`);
-
-      // Try native BarcodeDetector
-      if (window.BarcodeDetector) {
-        const fmts = await BarcodeDetector.getSupportedFormats();
-        log(`BarcodeDetector supported. Formats: ${fmts.join(", ")}`);
-        const det = new BarcodeDetector({ formats: fmts });
-        let ticks = 0;
-        const tick = async () => {
-          ticks++;
-          if (ticks % 30 === 0) log(`Scanning... (${ticks} frames)`);
-          if (!videoRef.current || videoRef.current.readyState < 2) { rafRef.current = requestAnimationFrame(tick); return; }
-          try {
-            const res = await det.detect(videoRef.current);
-            if (res.length) { handleCode(res[0].rawValue); return; }
-          } catch(e) { log(`Detect error: ${e.message}`); }
-          rafRef.current = requestAnimationFrame(tick);
-        };
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        log("BarcodeDetector NOT available — loading ZXing...");
-        loadZXing(v);
-      }
+      v.onloadedmetadata = () => {
+        v.play().then(() => {
+          log(`Video playing: ${v.videoWidth}x${v.videoHeight}`);
+          loadZXing(v);
+        }).catch(e => log(`Play error: ${e.message}`));
+      };
     } catch(e) {
       log(`Camera error: ${e.message}`);
       setStep("menu");
@@ -120,28 +102,50 @@ function ScannerScreen({ items, vendors, onUpdateQty, onAddItem }) {
   };
 
   const loadZXing = (v) => {
-    if (window.ZXing) { initZXing(v); return; }
+    if (window.ZXing) { log("ZXing already loaded"); initZXing(v); return; }
+    log("Fetching ZXing library...");
     const s = document.createElement("script");
-    s.src = "https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js";
-    s.onload = () => { log("ZXing loaded"); initZXing(v); };
-    s.onerror = () => log("ZXing failed to load");
+    s.src = "https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js";
+    s.onload = () => { log("ZXing loaded OK"); initZXing(v); };
+    s.onerror = () => {
+      log("jsdelivr failed, trying unpkg...");
+      const s2 = document.createElement("script");
+      s2.src = "https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js";
+      s2.onload = () => { log("ZXing loaded from unpkg"); initZXing(v); };
+      s2.onerror = () => log("ERROR: ZXing failed to load from both CDNs");
+      document.head.appendChild(s2);
+    };
     document.head.appendChild(s);
   };
 
   const initZXing = (v) => {
     try {
-      log("Initializing ZXing reader...");
+      log("Initializing ZXing...");
+      if (!window.ZXing) { log("ERROR: ZXing not on window"); return; }
       const hints = new Map();
+      hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        window.ZXing.BarcodeFormat.EAN_13,
+        window.ZXing.BarcodeFormat.EAN_8,
+        window.ZXing.BarcodeFormat.UPC_A,
+        window.ZXing.BarcodeFormat.UPC_E,
+        window.ZXing.BarcodeFormat.CODE_128,
+        window.ZXing.BarcodeFormat.CODE_39,
+      ]);
       hints.set(window.ZXing.DecodeHintType.TRY_HARDER, true);
       const reader = new window.ZXing.MultiFormatReader();
       reader.setHints(hints);
+      log("ZXing reader ready — scanning");
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       let ticks = 0;
+      let errorCount = 0;
       const tick = () => {
+        if (!videoRef.current) return;
         ticks++;
-        if (ticks % 30 === 0) log(`ZXing scanning... (${ticks} frames, ${v.videoWidth}x${v.videoHeight})`);
-        if (!v || v.readyState < 2 || v.videoWidth === 0) { rafRef.current = requestAnimationFrame(tick); return; }
+        if (ticks % 60 === 0) log(`Scanning frame ${ticks}, size: ${v.videoWidth}x${v.videoHeight}`);
+        if (v.readyState < 2 || v.videoWidth === 0) {
+          rafRef.current = requestAnimationFrame(tick); return;
+        }
         canvas.width = v.videoWidth;
         canvas.height = v.videoHeight;
         ctx.drawImage(v, 0, 0);
@@ -150,8 +154,11 @@ function ScannerScreen({ items, vendors, onUpdateQty, onAddItem }) {
           const lum = new window.ZXing.RGBLuminanceSource(imgData.data, canvas.width, canvas.height);
           const bin = new window.ZXing.BinaryBitmap(new window.ZXing.HybridBinarizer(lum));
           const result = reader.decode(bin);
-          if (result) { handleCode(result.getText()); return; }
-        } catch(e) {}
+          if (result) { log(`Decoded: ${result.getText()}`); handleCode(result.getText()); return; }
+        } catch(e) {
+          errorCount++;
+          if (errorCount % 120 === 0) log(`No barcode yet (${errorCount} misses)`);
+        }
         rafRef.current = requestAnimationFrame(tick);
       };
       rafRef.current = requestAnimationFrame(tick);
