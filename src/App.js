@@ -46,9 +46,71 @@ const T = {
   topBtn: a => ({ flex:"0 0 auto", padding:"24px 28px 20px", border:"none", background:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:8, color:a?"#185FA5":"var(--color-text-secondary)", borderBottom:a?"5px solid #185FA5":"5px solid transparent", fontSize:fs.xs, fontWeight:a?700:500 }),
 };
 
+// ── CONFIRM NEW ITEM SCREEN ─────────────────────────────────────
+function ConfirmNewItemScreen({ initial, vendors, onSave, onBack }) {
+  const [form, setForm] = useState({
+    category: "Dry Goods", unit: "", par: "0", vendor: vendors[0]?.id || "",
+    ...initial, qty: "0", par: String(initial.par ?? 0),
+  });
+  const [qtyVal, setQtyVal] = useState("0");
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const num = Math.max(0, parseInt(qtyVal)||0);
+  const save = () => {
+    if (!form.name.trim()) return;
+    onSave({ ...form, qty: num, par: Number(form.par), id: Date.now() });
+  };
+  return (
+    <div style={{ ...T.screen, fontFamily:"system-ui,sans-serif" }}>
+      <div style={T.ph}>
+        <button onClick={onBack} style={T.backBtn}>← Back</button>
+        <p style={{ ...T.ptitle, fontSize:fs.xl }}>Confirm & Add</p>
+      </div>
+      <div style={{ padding:"0 28px 80px" }}>
+        <div style={{ background:"#E6F1FB", borderRadius:20, padding:"16px 24px", marginBottom:28 }}>
+          <p style={{ margin:0, fontSize:fs.sm, color:"#185FA5", fontWeight:600 }}>Found in product database — confirm details below</p>
+        </div>
+
+        <label style={T.lbl}>Product Name</label>
+        <input style={T.finp} value={form.name} onChange={e=>set("name",e.target.value)} />
+        <label style={T.lbl}>Brand</label>
+        <input style={T.finp} value={form.brand} onChange={e=>set("brand",e.target.value)} />
+        <label style={T.lbl}>SKU / Barcode</label>
+        <input style={T.finp} value={form.sku} onChange={e=>set("sku",e.target.value)} />
+        <label style={T.lbl}>Category</label>
+        <select style={T.finp} value={form.category} onChange={e=>set("category",e.target.value)}>
+          {["Produce","Dairy","Dry Goods","Meat & Seafood","Beverages","Cleaning Supplies"].map(c=><option key={c}>{c}</option>)}
+        </select>
+        <label style={T.lbl}>Unit (lbs, gal, cs, btl...)</label>
+        <input style={T.finp} value={form.unit} onChange={e=>set("unit",e.target.value)} placeholder="lbs" />
+        <label style={T.lbl}>Par Level</label>
+        <input style={T.finp} type="number" min="0" value={form.par} onChange={e=>set("par",e.target.value)} />
+        <label style={T.lbl}>Vendor</label>
+        <select style={T.finp} value={form.vendor} onChange={e=>set("vendor",e.target.value)}>
+          {vendors.map(v=><option key={v.id} value={v.id}>{v.name}</option>)}
+        </select>
+        <label style={T.lbl}>Notes</label>
+        <input style={T.finp} value={form.notes} onChange={e=>set("notes",e.target.value)} placeholder="e.g. 50lb bag, weight, size..." />
+
+        <div style={{ borderTop:"2px solid var(--color-border-tertiary)", margin:"8px 0 28px", paddingTop:28 }}>
+          <label style={{ ...T.lbl, fontSize:fs.md }}>Quantity on hand</label>
+          <div style={{ display:"flex", alignItems:"center", gap:20, marginBottom:16 }}>
+            <button onClick={() => setQtyVal(String(Math.max(0,num-1)))} style={{ width:90, height:90, borderRadius:22, border:"none", background:"#E6F1FB", color:"#185FA5", fontSize:56, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>−</button>
+            <input type="number" min="0" value={qtyVal} onChange={e=>setQtyVal(e.target.value)}
+              style={{ flex:1, textAlign:"center", fontSize:80, fontWeight:800, border:"2px solid var(--color-border-secondary)", borderRadius:22, padding:"16px 8px", background:"var(--color-background-secondary)", color:"var(--color-text-primary)", minWidth:0 }} />
+            <button onClick={() => setQtyVal(String(num+1))} style={{ width:90, height:90, borderRadius:22, border:"none", background:"#185FA5", color:"#fff", fontSize:56, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>+</button>
+          </div>
+          <p style={{ textAlign:"center", fontSize:fs.sm, color:"var(--color-text-secondary)", margin:"0 0 8px" }}>{form.unit || "units"} on hand</p>
+        </div>
+
+        <button onClick={save} style={T.btn()}>Add to Inventory</button>
+      </div>
+    </div>
+  );
+}
+
 // ── SCANNER SCREEN ──────────────────────────────────────────────
 function ScannerScreen({ items, vendors, onUpdateQty, onAddItem }) {
-  const [step, setStep] = useState("menu"); // menu | camera | result
+  const [step, setStep] = useState("menu"); // menu | camera | lookup | result
   const [logs, setLogs] = useState([]);
   const [scanResult, setScanResult] = useState(null);
   const [manualSku, setManualSku] = useState("");
@@ -68,11 +130,48 @@ function ScannerScreen({ items, vendors, onUpdateQty, onAddItem }) {
     streamRef.current = null;
   };
 
-  const handleCode = useCallback(code => {
+  const handleCode = useCallback(async code => {
     stopCamera();
     log(`Barcode detected: ${code}`);
-    const found = items.find(i => i.sku === code);
-    setScanResult(found ? { ...found } : { notFound: true, sku: code });
+    const inInventory = items.find(i => i.sku === code);
+    if (inInventory) {
+      setScanResult({ ...inInventory, inInventory: true });
+      setStep("result");
+      return;
+    }
+    // Not in inventory — look up globally
+    log("Looking up barcode online...");
+    setStep("lookup");
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+      const data = await res.json();
+      if (data.status === 1 && data.product) {
+        const p = data.product;
+        const name = p.product_name || p.product_name_en || "";
+        const brand = p.brands || "";
+        const qty_str = p.quantity || "";
+        log(`Found online: ${name} by ${brand}`);
+        setScanResult({
+          notFound: false,
+          foundOnline: true,
+          sku: code,
+          name,
+          brand,
+          notes: qty_str,
+          category: "Dry Goods",
+          unit: "",
+          qty: 0,
+          par: 0,
+          vendor: "",
+        });
+      } else {
+        log("Not found online either");
+        setScanResult({ notFound: true, sku: code });
+      }
+    } catch(e) {
+      log(`Lookup error: ${e.message}`);
+      setScanResult({ notFound: true, sku: code });
+    }
     setStep("result");
   }, [items]);
 
@@ -193,33 +292,68 @@ function ScannerScreen({ items, vendors, onUpdateQty, onAddItem }) {
     </div>
   );
 
-  if (step === "result") return (
-    <div style={{ ...T.screen }}>
-      <div style={T.ph}><button onClick={() => setStep("menu")} style={T.backBtn}>← Back</button></div>
-      <div style={{ padding:"0 28px" }}>
-        {scanResult && !scanResult.notFound ? (
-          <div style={{ ...T.card, margin:"0 0 0", border:"2.5px solid #185FA5" }}>
-            <p style={{ margin:"0 0 10px", fontWeight:800, fontSize:fs.lg, color:"var(--color-text-primary)" }}>{scanResult.name}</p>
-            {scanResult.brand && <p style={{ margin:"0 0 6px", fontSize:fs.sm, color:"var(--color-text-secondary)" }}>{scanResult.brand}</p>}
-            <p style={{ margin:"0 0 28px", fontSize:fs.sm, color:"var(--color-text-secondary)" }}>SKU: {scanResult.sku}</p>
-            <button onClick={() => setQtyItem(items.find(i => i.id === scanResult.id))} style={T.btn()}>Update Quantity</button>
-          </div>
-        ) : (
-          <div style={{ ...T.card, margin:"0", border:"2.5px solid #E24B4A" }}>
-            <p style={{ margin:"0 0 10px", fontWeight:800, color:"#E24B4A", fontSize:fs.lg }}>Not in inventory</p>
-            <p style={{ margin:"0 0 24px", fontSize:fs.sm, color:"var(--color-text-secondary)" }}>SKU: {scanResult?.sku}</p>
-            <button style={T.btn()} onClick={() => setAddScreen(scanResult?.sku || "")}>Add as New Product</button>
-          </div>
-        )}
-        {logs.length > 0 && (
-          <div style={{ marginTop:28, background:"var(--color-background-secondary)", borderRadius:20, padding:"20px 24px" }}>
-            <p style={{ margin:"0 0 12px", fontSize:fs.xs, fontWeight:700, color:"var(--color-text-secondary)", textTransform:"uppercase" }}>Scanner Log</p>
-            {logs.map((l,i) => <p key={i} style={{ margin:"4px 0", fontSize:18, fontFamily:"monospace", color:"var(--color-text-secondary)" }}>{l}</p>)}
-          </div>
-        )}
-      </div>
+  if (step === "lookup") return (
+    <div style={{ ...T.screen, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:48, textAlign:"center" }}>
+      <div style={{ width:80, height:80, borderRadius:"50%", border:`6px solid #185FA5`, borderTopColor:"transparent", marginBottom:32, animation:"spin 1s linear infinite" }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <p style={{ fontSize:fs.lg, fontWeight:700, color:"var(--color-text-primary)", margin:"0 0 12px" }}>Looking up barcode...</p>
+      <p style={{ fontSize:fs.sm, color:"var(--color-text-secondary)" }}>Searching product database</p>
     </div>
   );
+
+  if (step === "result" && scanResult) {
+    // Already in inventory — offer to update qty
+    if (scanResult.inInventory) return (
+      <div style={{ ...T.screen }}>
+        <div style={T.ph}><button onClick={() => setStep("menu")} style={T.backBtn}>← Back</button></div>
+        <div style={{ padding:"0 28px" }}>
+          <div style={{ ...T.card, margin:"0 0 0", border:"2.5px solid #185FA5" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
+              <div style={{ flex:1, marginRight:16 }}>
+                <p style={{ margin:"0 0 8px", fontWeight:800, fontSize:fs.lg, color:"var(--color-text-primary)" }}>{scanResult.name}</p>
+                {scanResult.brand && <p style={{ margin:"0 0 6px", fontSize:fs.sm, color:"var(--color-text-secondary)" }}>{scanResult.brand}</p>}
+                <p style={{ margin:0, fontSize:fs.sm, color:"var(--color-text-secondary)" }}>{scanResult.category} · {vendors.find(v=>v.id===scanResult.vendor)?.name}</p>
+              </div>
+              <span style={T.badge(sColor(scanResult))}>{sLabel(scanResult)}</span>
+            </div>
+            <div style={{ background:"var(--color-background-secondary)", borderRadius:16, padding:"16px 20px", marginBottom:24 }}>
+              <p style={{ margin:0, fontSize:fs.sm, color:"var(--color-text-secondary)" }}>Current qty: <strong style={{ color:"var(--color-text-primary)" }}>{scanResult.qty} {scanResult.unit}</strong> · Par: {scanResult.par}</p>
+            </div>
+            <button onClick={() => setQtyItem(items.find(i=>i.id===scanResult.id))} style={T.btn()}>Update Quantity</button>
+          </div>
+          {logs.length > 0 && (
+            <div style={{ marginTop:24, background:"var(--color-background-secondary)", borderRadius:20, padding:"20px 24px" }}>
+              {logs.slice(0,4).map((l,i) => <p key={i} style={{ margin:"4px 0", fontSize:18, fontFamily:"monospace", color:"var(--color-text-secondary)" }}>{l}</p>)}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+
+    // Found online — confirm details and set qty before adding
+    if (scanResult.foundOnline) return (
+      <ConfirmNewItemScreen
+        initial={scanResult}
+        vendors={vendors}
+        onSave={item => { onAddItem(item); setStep("menu"); setScanResult(null); }}
+        onBack={() => setStep("menu")}
+      />
+    );
+
+    // Not found anywhere
+    return (
+      <div style={{ ...T.screen }}>
+        <div style={T.ph}><button onClick={() => setStep("menu")} style={T.backBtn}>← Back</button></div>
+        <div style={{ padding:"0 28px" }}>
+          <div style={{ ...T.card, margin:"0", border:"2.5px solid #E24B4A" }}>
+            <p style={{ margin:"0 0 10px", fontWeight:800, color:"#E24B4A", fontSize:fs.lg }}>Not found anywhere</p>
+            <p style={{ margin:"0 0 24px", fontSize:fs.sm, color:"var(--color-text-secondary)" }}>SKU {scanResult.sku} wasn't found in your inventory or online. Add it manually.</p>
+            <button style={T.btn()} onClick={() => setAddScreen(scanResult.sku)}>Add Manually</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // menu step
   return (
