@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
-const CATEGORIES = ["All","Produce","Dairy","Dry Goods","Meat & Seafood","Beverages","Cleaning Supplies"];
+const SUPABASE_URL = "https://vkosasytwgyhcxvxiksv.supabase.co";
+const SUPABASE_KEY = "sb_publishable_60HXdM9pOV6u_vFn_LQ2ng_K1Z__Db2";
+const DB = {
+  headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` },
+  url: (table, query="") => `${SUPABASE_URL}/rest/v1/${table}${query}`,
+  get: async (table, query="") => { const r = await fetch(DB.url(table, query), { headers: DB.headers }); return r.json(); },
+  post: async (table, body) => fetch(DB.url(table), { method:"POST", headers:{...DB.headers, "Prefer":"return=representation"}, body:JSON.stringify(body) }),
+  patch: async (table, query, body) => fetch(DB.url(table, query), { method:"PATCH", headers:{...DB.headers, "Prefer":"return=representation"}, body:JSON.stringify(body) }),
+  del: async (table, query) => fetch(DB.url(table, query), { method:"DELETE", headers:DB.headers }),
+  upsert: async (table, body) => fetch(DB.url(table), { method:"POST", headers:{...DB.headers, "Prefer":"resolution=merge-duplicates,return=representation"}, body:JSON.stringify(body) }),
+};
 const INIT_VENDORS = [
   { id:"v1", name:"Fresh Farms Co." },
   { id:"v2", name:"Metro Food Supply" },
@@ -409,27 +419,94 @@ function ScanScreen({ items, vendors, onUpdateQty, onAddItem }) {
 // ── MAIN APP ─────────────────────────────────────────────────────
 export default function App() {
   const [view, setView] = useState("Inventory");
-  const [items, setItems] = useState(INIT_ITEMS);
-  const [vendors, setVendors] = useState(INIT_VENDORS);
+  const [items, setItems] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [cat, setCat] = useState("All");
   const [search, setSearch] = useState("");
   const [orderVendor, setOrderVendor] = useState("all");
   const [toast, setToast] = useState(null);
   const [screen, setScreen] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null),3000); };
-  const setQty = (id,qty) => { setItems(p=>p.map(i=>i.id===id?{...i,qty}:i)); showToast("Quantity saved!"); };
-  const saveItem = item => { setItems(p=>p.map(i=>i.id===item.id?{...i,...item}:i)); showToast("Item updated!"); };
-  const addItem = item => { setItems(p=>[...p,{brand:"",notes:"",...item,id:Date.now()}]); showToast("Item added!"); };
-  const deleteItem = id => { setItems(p=>p.filter(i=>i.id!==id)); showToast("Item deleted."); };
-  const addVendor = v => { setVendors(p=>[...p,v]); showToast("Vendor added!"); };
-  const deleteVendor = id => { setVendors(p=>p.filter(v=>v.id!==id)); setItems(p=>p.filter(i=>i.vendor!==id)); showToast("Vendor deleted."); };
+
+  // Load all data from Supabase on startup
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [v, i] = await Promise.all([
+          DB.get("vendors", "?order=name"),
+          DB.get("items", "?order=name"),
+        ]);
+        if (Array.isArray(v)) {
+          setVendors(v.length ? v : INIT_VENDORS);
+          if (!v.length) await DB.upsert("vendors", INIT_VENDORS);
+        }
+        if (Array.isArray(i)) {
+          setItems(i.length ? i : INIT_ITEMS);
+          if (!i.length) await DB.upsert("items", INIT_ITEMS);
+        }
+      } catch(e) {
+        showToast("Failed to load data");
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const setQty = async (id, qty) => {
+    setItems(p => p.map(i => i.id===id ? {...i, qty} : i));
+    await DB.patch("items", `?id=eq.${id}`, { qty });
+    showToast("Quantity saved!");
+  };
+
+  const saveItem = async item => {
+    setItems(p => p.map(i => i.id===item.id ? {...i,...item} : i));
+    await DB.patch("items", `?id=eq.${item.id}`, item);
+    showToast("Item updated!");
+  };
+
+  const addItem = async item => {
+    const newItem = {brand:"", notes:"", ...item, id: Date.now()};
+    setItems(p => [...p, newItem].sort((a,b)=>a.name.localeCompare(b.name)));
+    await DB.upsert("items", newItem);
+    showToast("Item added!");
+  };
+
+  const deleteItem = async id => {
+    setItems(p => p.filter(i => i.id!==id));
+    await DB.del("items", `?id=eq.${id}`);
+    showToast("Item deleted.");
+  };
+
+  const addVendor = async v => {
+    setVendors(p => [...p, v]);
+    await DB.upsert("vendors", v);
+    showToast("Vendor added!");
+  };
+
+  const deleteVendor = async id => {
+    setVendors(p => p.filter(v => v.id!==id));
+    setItems(p => p.filter(i => i.vendor!==id));
+    await DB.del("items", `?vendor=eq.${id}`);
+    await DB.del("vendors", `?id=eq.${id}`);
+    showToast("Vendor deleted.");
+  };
 
   const sorted = [...items].sort((a,b)=>a.name.localeCompare(b.name));
-  const filtered = sorted.filter(i=>(cat==="All"||i.category===cat)&&(i.name.toLowerCase().includes(search.toLowerCase())||i.sku.includes(search)));
+  const filtered = sorted.filter(i=>(cat==="All"||i.category===cat)&&(i.name.toLowerCase().includes(search.toLowerCase())||i.sku?.includes(search)));
   const needsOrder = items.filter(i=>i.qty<i.par);
   const orderFiltered = orderVendor==="all"?needsOrder:needsOrder.filter(i=>i.vendor===orderVendor);
+
+  if (loading) return (
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"system-ui,sans-serif", gap:24 }}>
+      <div style={{ width:80, height:80, borderRadius:"50%", border:"6px solid #185FA5", borderTopColor:"transparent", animation:"spin 1s linear infinite" }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <p style={{ fontSize:fs.md, color:"var(--color-text-secondary)", margin:0 }}>Loading KitchenStock...</p>
+    </div>
+  );
 
   if (screen?.type==="qty") return <QtyScreen item={screen.item} onSave={setQty} onBack={()=>setScreen(null)} />;
   if (screen?.type==="addItem") return <ItemFormScreen vendors={vendors} onSave={addItem} onBack={()=>setScreen(null)} initial={{sku:screen.sku||""}} title="Add Product" />;
