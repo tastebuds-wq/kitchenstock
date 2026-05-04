@@ -275,7 +275,12 @@ function ScannerScreen({ items, vendors, onUpdateQty, onAddItem }) {
         <p style={{ margin:0, color:"#fff", fontWeight:800, fontSize:fs.xl }}>Scanning...</p>
         <button onClick={() => { stopCamera(); setStep("menu"); }} style={{ background:"rgba(255,255,255,0.25)", border:"none", color:"#fff", borderRadius:28, padding:"18px 36px", cursor:"pointer", fontSize:fs.md, fontWeight:700 }}>Cancel</button>
       </div>
-                <video ref={videoRef} playsInline muted autoPlay style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity: videoReady ? 1 : 0, transition:"opacity 0.3s ease" }} />
+                {cameraLoading && (
+            <div style={{ position:"absolute", inset:0, background:"#000", display:"flex", alignItems:"center", justifyContent:"center", zIndex:5 }}>
+              <p style={{ color:"#fff", fontSize:fs.md, fontWeight:600 }}>Starting camera...</p>
+            </div>
+          )}
+          <video ref={videoRef} playsInline muted autoPlay style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity: videoReady ? 1 : 0, transition:"opacity 0.4s ease" }} />
       <canvas ref={canvasRef} style={{ display:"none" }} />
       <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
         <div style={{ width:"85%", height:220, position:"relative" }}>
