@@ -170,27 +170,27 @@ export default function App() {
     navigator.clipboard.writeText(lines).then(() => showToast("Order copied!"));
   };
 
-  const fs = 20;
+  const fs = 24;
   const s = {
-    wrap: { fontFamily: "system-ui, sans-serif", width: "100%", maxWidth: "100vw", margin: 0, paddingBottom: 100, boxSizing: "border-box", overflowX: "hidden" },
-    header: { padding: "28px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" },
-    title: { fontSize: 32, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 },
+    wrap: { fontFamily: "system-ui, sans-serif", width: "100%", maxWidth: "100vw", margin: 0, paddingBottom: 120, boxSizing: "border-box", overflowX: "hidden" },
+    header: { padding: "32px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" },
+    title: { fontSize: 38, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 },
     sub: { fontSize: fs, color: "var(--color-text-secondary)", marginTop: 6 },
     nav: { position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--color-background-primary)", borderTop: "0.5px solid var(--color-border-tertiary)", display: "flex", zIndex: 10 },
-    navBtn: (a) => ({ flex: 1, padding: "16px 0 14px", border: "none", background: "none", cursor: "pointer", fontSize: 14, color: a ? "#185FA5" : "var(--color-text-secondary)", fontWeight: a ? 700 : 400, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }),
-    navDot: { width: 7, height: 7, borderRadius: "50%", background: "#E24B4A" },
-    input: { flex: 1, padding: "16px 18px", borderRadius: 14, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)" },
-    chip: (a) => ({ padding: "10px 20px", borderRadius: 24, border: "0.5px solid " + (a ? "#185FA5" : "var(--color-border-tertiary)"), background: a ? "#E6F1FB" : "var(--color-background-secondary)", color: a ? "#185FA5" : "var(--color-text-secondary)", fontSize: 17, cursor: "pointer", whiteSpace: "nowrap", fontWeight: a ? 700 : 400 }),
-    card: { background: "var(--color-background-primary)", borderRadius: 18, border: "0.5px solid var(--color-border-tertiary)", padding: "20px", margin: "0 20px 14px" },
-    badge: (c) => ({ fontSize: 16, padding: "6px 14px", borderRadius: 24, background: c + "22", color: c, fontWeight: 700 }),
-    qtyBtn: { width: 52, height: 52, borderRadius: 14, border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-secondary)", cursor: "pointer", fontSize: 28, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-primary)" },
-    bigBtn: { width: "100%", padding: "20px", borderRadius: 16, border: "none", background: "#185FA5", color: "#fff", fontSize: 20, fontWeight: 700, cursor: "pointer", marginTop: 16 },
+    navBtn: (a) => ({ flex: 1, padding: "18px 0 16px", border: "none", background: "none", cursor: "pointer", fontSize: 17, color: a ? "#185FA5" : "var(--color-text-secondary)", fontWeight: a ? 700 : 400, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }),
+    navDot: { width: 8, height: 8, borderRadius: "50%", background: "#E24B4A" },
+    input: { flex: 1, padding: "18px 20px", borderRadius: 16, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)" },
+    chip: (a) => ({ padding: "12px 22px", borderRadius: 28, border: "0.5px solid " + (a ? "#185FA5" : "var(--color-border-tertiary)"), background: a ? "#E6F1FB" : "var(--color-background-secondary)", color: a ? "#185FA5" : "var(--color-text-secondary)", fontSize: 20, cursor: "pointer", whiteSpace: "nowrap", fontWeight: a ? 700 : 400 }),
+    card: { background: "var(--color-background-primary)", borderRadius: 20, border: "0.5px solid var(--color-border-tertiary)", padding: "24px", margin: "0 20px 16px" },
+    badge: (c) => ({ fontSize: 19, padding: "7px 16px", borderRadius: 28, background: c + "22", color: c, fontWeight: 700 }),
+    qtyBtn: { width: 64, height: 64, borderRadius: 16, border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-secondary)", cursor: "pointer", fontSize: 34, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-primary)" },
+    bigBtn: { width: "100%", padding: "22px", borderRadius: 18, border: "none", background: "#185FA5", color: "#fff", fontSize: 22, fontWeight: 700, cursor: "pointer", marginTop: 18 },
     modal: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "flex-end" },
-    modalBox: { width: "100%", background: "var(--color-background-primary)", borderRadius: "24px 24px 0 0", padding: "28px 20px 56px" },
-    label: { fontSize: 17, color: "var(--color-text-secondary)", marginBottom: 8, display: "block" },
-    formInput: { width: "100%", padding: "16px 18px", borderRadius: 14, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)", boxSizing: "border-box", marginBottom: 14 },
-    toast: { position: "fixed", top: 28, left: "50%", transform: "translateX(-50%)", background: "#185FA5", color: "#fff", padding: "14px 28px", borderRadius: 32, fontSize: 18, fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" },
-    sectionTitle: { fontSize: 17, fontWeight: 700, color: "var(--color-text-secondary)", padding: "20px 20px 10px", textTransform: "uppercase", letterSpacing: "0.05em" },
+    modalBox: { width: "100%", background: "var(--color-background-primary)", borderRadius: "28px 28px 0 0", padding: "32px 20px 64px" },
+    label: { fontSize: 20, color: "var(--color-text-secondary)", marginBottom: 8, display: "block" },
+    formInput: { width: "100%", padding: "18px 20px", borderRadius: 16, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)", boxSizing: "border-box", marginBottom: 16 },
+    toast: { position: "fixed", top: 32, left: "50%", transform: "translateX(-50%)", background: "#185FA5", color: "#fff", padding: "16px 32px", borderRadius: 36, fontSize: 20, fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" },
+    sectionTitle: { fontSize: 19, fontWeight: 700, color: "var(--color-text-secondary)", padding: "24px 20px 12px", textTransform: "uppercase", letterSpacing: "0.05em" },
   };
 
   const navIcons = {
