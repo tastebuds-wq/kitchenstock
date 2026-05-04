@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from "react";
 
 const CATEGORIES = ["All","Produce","Dairy","Dry Goods","Meat & Seafood","Beverages","Cleaning Supplies"];
 const VENDORS = [
@@ -31,39 +31,31 @@ const statusLabel = (qty, par) => {
 };
 
 const views = ["Inventory", "Scan", "Order", "Vendors"];
-
 const QUAGGA_URL = "https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js";
 
 function BarcodeScanner({ onDetected, onClose }) {
   const containerRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(null);
-  const quaggaRef = useRef(null);
 
   useEffect(() => {
     let script = document.getElementById("quagga-script");
-    const init = () => {
-      setLoaded(true);
-    };
     if (window.Quagga) { setLoaded(true); return; }
     if (!script) {
       script = document.createElement("script");
       script.id = "quagga-script";
       script.src = QUAGGA_URL;
-      script.onload = init;
+      script.onload = () => setLoaded(true);
       script.onerror = () => setError("Failed to load scanner library.");
       document.head.appendChild(script);
     } else {
-      script.addEventListener("load", init);
+      script.addEventListener("load", () => setLoaded(true));
     }
-    return () => script.removeEventListener("load", init);
   }, []);
 
   useEffect(() => {
     if (!loaded || !containerRef.current) return;
     const Q = window.Quagga;
-    quaggaRef.current = Q;
-
     Q.init({
       inputStream: {
         type: "LiveStream",
@@ -79,57 +71,46 @@ function BarcodeScanner({ onDetected, onClose }) {
       if (err) { setError("Camera access denied or unavailable."); return; }
       Q.start();
     });
-
     const handler = (result) => {
-      if (result.codeResult) {
-        Q.stop();
-        onDetected(result.codeResult.code);
-      }
+      if (result.codeResult) { Q.stop(); onDetected(result.codeResult.code); }
     };
     Q.onDetected(handler);
-
-    return () => {
-      try { Q.offDetected(handler); Q.stop(); } catch(e) {}
-    };
+    return () => { try { Q.offDetected(handler); Q.stop(); } catch(e) {} };
   }, [loaded, onDetected]);
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 200, display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px", background: "rgba(0,0,0,0.7)" }}>
-        <p style={{ margin: 0, color: "#fff", fontWeight: 600, fontSize: 16 }}>Scan Barcode</p>
-        <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 20, padding: "6px 14px", cursor: "pointer", fontSize: 14 }}>Cancel</button>
+        <p style={{ margin: 0, color: "#fff", fontWeight: 600, fontSize: 18 }}>Scan Barcode</p>
+        <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 20, padding: "8px 16px", cursor: "pointer", fontSize: 16 }}>Cancel</button>
       </div>
-
       {error ? (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff", padding: 24, textAlign: "center" }}>
           <p style={{ fontSize: 40, marginBottom: 12 }}>📷</p>
           <p style={{ fontWeight: 600, marginBottom: 8 }}>{error}</p>
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>Please allow camera access in your browser settings, then try again.</p>
-          <button onClick={onClose} style={{ marginTop: 20, background: "#185FA5", border: "none", color: "#fff", borderRadius: 10, padding: "12px 24px", cursor: "pointer", fontWeight: 600 }}>Go Back</button>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)" }}>Please allow camera access in Safari settings.</p>
+          <button onClick={onClose} style={{ marginTop: 20, background: "#185FA5", border: "none", color: "#fff", borderRadius: 12, padding: "14px 28px", cursor: "pointer", fontWeight: 600, fontSize: 16 }}>Go Back</button>
         </div>
       ) : (
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
           <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-          {/* Viewfinder overlay */}
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <div style={{ width: 260, height: 140, position: "relative" }}>
-              {/* Corner markers */}
-              {[["0,0","borderTop","borderLeft"],["0,auto","borderBottom","borderLeft"],["auto,0","borderTop","borderRight"],["auto,auto","borderBottom","borderRight"]].map(([pos,b1,b2],i) => {
-                const [t,b] = pos.split(",");
-                return <div key={i} style={{ position: "absolute", top: t === "0" ? 0 : "auto", bottom: b === "0" ? 0 : "auto", left: b2 === "borderLeft" ? 0 : "auto", right: b2 === "borderRight" ? 0 : "auto", width: 24, height: 24, [b1]: "3px solid #185FA5", [b2]: "3px solid #185FA5" }} />;
-              })}
+              {[["0","auto","0","auto"],["auto","0","0","auto"],["0","auto","auto","0"],["auto","0","auto","0"]].map(([t,b,l,r],i) => (
+                <div key={i} style={{ position: "absolute", top: t !== "auto" ? 0 : "auto", bottom: b !== "auto" ? 0 : "auto", left: l !== "auto" ? 0 : "auto", right: r !== "auto" ? 0 : "auto", width: 24, height: 24, borderTop: (t !== "auto") ? "3px solid #185FA5" : "none", borderBottom: (b !== "auto") ? "3px solid #185FA5" : "none", borderLeft: (l !== "auto") ? "3px solid #185FA5" : "none", borderRight: (r !== "auto") ? "3px solid #185FA5" : "none" }} />
+              ))}
               <div style={{ position: "absolute", top: "50%", left: 0, right: 0, height: 2, background: "rgba(24,95,165,0.7)", transform: "translateY(-50%)" }} />
             </div>
           </div>
           {!loaded && (
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
-              <p>Loading scanner...</p>
+              <p style={{ fontSize: 16 }}>Loading scanner...</p>
             </div>
           )}
         </div>
       )}
-      <div style={{ background: "rgba(0,0,0,0.7)", padding: "12px 24px", textAlign: "center" }}>
-        <p style={{ margin: 0, color: "rgba(255,255,255,0.8)", fontSize: 13 }}>Hold steady — align barcode within the frame</p>
+      <div style={{ background: "rgba(0,0,0,0.7)", padding: "14px 24px", textAlign: "center" }}>
+        <p style={{ margin: 0, color: "rgba(255,255,255,0.8)", fontSize: 15 }}>Align barcode within the frame</p>
       </div>
     </div>
   );
@@ -189,33 +170,34 @@ export default function App() {
     navigator.clipboard.writeText(lines).then(() => showToast("Order copied!"));
   };
 
+  const fs = 16;
   const s = {
-    wrap: { fontFamily: "system-ui, sans-serif", maxWidth: 420, margin: "0 auto", paddingBottom: 70 },
-    header: { padding: "16px 16px 0", display: "flex", justifyContent: "space-between", alignItems: "center" },
-    title: { fontSize: 20, fontWeight: 600, color: "var(--color-text-primary)", margin: 0 },
-    sub: { fontSize: 13, color: "var(--color-text-secondary)", marginTop: 2 },
-    nav: { position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, background: "var(--color-background-primary)", borderTop: "0.5px solid var(--color-border-tertiary)", display: "flex", zIndex: 10 },
-    navBtn: (a) => ({ flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer", fontSize: 11, color: a ? "#185FA5" : "var(--color-text-secondary)", fontWeight: a ? 600 : 400, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }),
-    navDot: { width: 5, height: 5, borderRadius: "50%", background: "#E24B4A" },
-    input: { flex: 1, padding: "9px 12px", borderRadius: 10, border: "0.5px solid var(--color-border-secondary)", fontSize: 14, background: "var(--color-background-secondary)", color: "var(--color-text-primary)" },
-    chip: (a) => ({ padding: "6px 12px", borderRadius: 20, border: "0.5px solid " + (a ? "#185FA5" : "var(--color-border-tertiary)"), background: a ? "#E6F1FB" : "var(--color-background-secondary)", color: a ? "#185FA5" : "var(--color-text-secondary)", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", fontWeight: a ? 600 : 400 }),
-    card: { background: "var(--color-background-primary)", borderRadius: 14, border: "0.5px solid var(--color-border-tertiary)", padding: "12px 14px", margin: "0 16px 10px" },
-    badge: (c) => ({ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: c + "22", color: c, fontWeight: 600 }),
-    qtyBtn: { width: 30, height: 30, borderRadius: 8, border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-secondary)", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-primary)" },
-    bigBtn: { width: "100%", padding: "13px", borderRadius: 12, border: "none", background: "#185FA5", color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", marginTop: 12 },
+    wrap: { fontFamily: "system-ui, sans-serif", width: "100%", maxWidth: "100vw", margin: 0, paddingBottom: 80, boxSizing: "border-box", overflowX: "hidden" },
+    header: { padding: "20px 20px 0", display: "flex", justifyContent: "space-between", alignItems: "center" },
+    title: { fontSize: 24, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 },
+    sub: { fontSize: fs, color: "var(--color-text-secondary)", marginTop: 4 },
+    nav: { position: "fixed", bottom: 0, left: 0, right: 0, background: "var(--color-background-primary)", borderTop: "0.5px solid var(--color-border-tertiary)", display: "flex", zIndex: 10 },
+    navBtn: (a) => ({ flex: 1, padding: "12px 0 10px", border: "none", background: "none", cursor: "pointer", fontSize: 12, color: a ? "#185FA5" : "var(--color-text-secondary)", fontWeight: a ? 700 : 400, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }),
+    navDot: { width: 6, height: 6, borderRadius: "50%", background: "#E24B4A" },
+    input: { flex: 1, padding: "12px 14px", borderRadius: 12, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)" },
+    chip: (a) => ({ padding: "8px 16px", borderRadius: 20, border: "0.5px solid " + (a ? "#185FA5" : "var(--color-border-tertiary)"), background: a ? "#E6F1FB" : "var(--color-background-secondary)", color: a ? "#185FA5" : "var(--color-text-secondary)", fontSize: 14, cursor: "pointer", whiteSpace: "nowrap", fontWeight: a ? 700 : 400 }),
+    card: { background: "var(--color-background-primary)", borderRadius: 16, border: "0.5px solid var(--color-border-tertiary)", padding: "16px", margin: "0 20px 12px" },
+    badge: (c) => ({ fontSize: 13, padding: "4px 10px", borderRadius: 20, background: c + "22", color: c, fontWeight: 700 }),
+    qtyBtn: { width: 40, height: 40, borderRadius: 10, border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-secondary)", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--color-text-primary)" },
+    bigBtn: { width: "100%", padding: "16px", borderRadius: 14, border: "none", background: "#185FA5", color: "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", marginTop: 14 },
     modal: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100, display: "flex", alignItems: "flex-end" },
-    modalBox: { width: "100%", maxWidth: 420, margin: "0 auto", background: "var(--color-background-primary)", borderRadius: "18px 18px 0 0", padding: "20px 16px 36px" },
-    label: { fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 4, display: "block" },
-    formInput: { width: "100%", padding: "9px 12px", borderRadius: 10, border: "0.5px solid var(--color-border-secondary)", fontSize: 14, background: "var(--color-background-secondary)", color: "var(--color-text-primary)", boxSizing: "border-box", marginBottom: 10 },
-    toast: { position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "#185FA5", color: "#fff", padding: "10px 20px", borderRadius: 24, fontSize: 13, fontWeight: 600, zIndex: 300, whiteSpace: "nowrap" },
-    sectionTitle: { fontSize: 13, fontWeight: 600, color: "var(--color-text-secondary)", padding: "14px 16px 6px", textTransform: "uppercase", letterSpacing: "0.05em" },
+    modalBox: { width: "100%", background: "var(--color-background-primary)", borderRadius: "20px 20px 0 0", padding: "24px 20px 48px" },
+    label: { fontSize: 14, color: "var(--color-text-secondary)", marginBottom: 6, display: "block" },
+    formInput: { width: "100%", padding: "12px 14px", borderRadius: 12, border: "0.5px solid var(--color-border-secondary)", fontSize: fs, background: "var(--color-background-secondary)", color: "var(--color-text-primary)", boxSizing: "border-box", marginBottom: 12 },
+    toast: { position: "fixed", top: 24, left: "50%", transform: "translateX(-50%)", background: "#185FA5", color: "#fff", padding: "12px 24px", borderRadius: 28, fontSize: 15, fontWeight: 700, zIndex: 300, whiteSpace: "nowrap" },
+    sectionTitle: { fontSize: 14, fontWeight: 700, color: "var(--color-text-secondary)", padding: "16px 20px 8px", textTransform: "uppercase", letterSpacing: "0.05em" },
   };
 
   const navIcons = {
-    Inventory: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
-    Scan: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>,
-    Order: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
-    Vendors: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    Inventory: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+    Scan: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>,
+    Order: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+    Vendors: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
   };
 
   return (
@@ -223,7 +205,6 @@ export default function App() {
       {toast && <div style={s.toast}>{toast}</div>}
       {showCamera && <BarcodeScanner onDetected={handleDetected} onClose={() => setShowCamera(false)} />}
 
-      {/* INVENTORY */}
       {view === "Inventory" && (
         <>
           <div style={s.header}>
@@ -231,88 +212,85 @@ export default function App() {
               <p style={s.title}>KitchenStock</p>
               <p style={s.sub}>{items.length} items · {needsOrder.length} need reorder</p>
             </div>
-            <button onClick={() => setShowAddModal(true)} style={{ background: "#185FA5", color: "#fff", border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+ Add</button>
+            <button onClick={() => setShowAddModal(true)} style={{ background: "#185FA5", color: "#fff", border: "none", borderRadius: 12, padding: "10px 18px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>+ Add</button>
           </div>
-          <div style={{ margin: "12px 16px 0", display: "flex", gap: 8 }}>
+          <div style={{ margin: "16px 20px 0", display: "flex", gap: 10 }}>
             <input style={s.input} placeholder="Search items or SKU..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <div style={{ display: "flex", gap: 6, overflowX: "auto", padding: "10px 16px 0", scrollbarWidth: "none" }}>
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 20px 0", scrollbarWidth: "none" }}>
             {CATEGORIES.map(c => <button key={c} style={s.chip(cat === c)} onClick={() => setCat(c)}>{c}</button>)}
           </div>
-          <div style={{ marginTop: 14 }}>
+          <div style={{ marginTop: 16 }}>
             {filtered.map(item => {
               const color = statusColor(item.qty, item.par);
               const pct = item.qty / item.par;
               const v = VENDORS.find(v => v.id === item.vendor)?.name || "";
               return (
                 <div key={item.id} style={s.card}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: "var(--color-text-primary)" }}>{item.name}</p>
-                      <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>{item.category} · {v}</p>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: "var(--color-text-primary)" }}>{item.name}</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--color-text-secondary)" }}>{item.category} · {v}</p>
                     </div>
                     <span style={s.badge(color)}>{statusLabel(item.qty, item.par)}</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
                     <button style={s.qtyBtn} onClick={() => updateQty(item.id, -1)}>−</button>
-                    <div style={{ textAlign: "center", minWidth: 60 }}>
-                      <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "var(--color-text-primary)" }}>{item.qty}</p>
-                      <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-secondary)" }}>of {item.par} {item.unit}</p>
+                    <div style={{ textAlign: "center", minWidth: 70 }}>
+                      <p style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "var(--color-text-primary)" }}>{item.qty}</p>
+                      <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>of {item.par} {item.unit}</p>
                     </div>
                     <button style={s.qtyBtn} onClick={() => updateQty(item.id, 1)}>+</button>
-                    <div style={{ flex: 1, height: 6, borderRadius: 4, background: "var(--color-border-tertiary)", position: "relative", overflow: "hidden" }}>
-                      <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: Math.min(100, pct * 100) + "%", background: color, borderRadius: 4, transition: "width 0.3s" }} />
+                    <div style={{ flex: 1, height: 8, borderRadius: 4, background: "var(--color-border-tertiary)", position: "relative", overflow: "hidden" }}>
+                      <div style={{ position: "absolute", top: 0, left: 0, height: "100%", width: Math.min(100, pct * 100) + "%", background: color, borderRadius: 4 }} />
                     </div>
                   </div>
                 </div>
               );
             })}
-            {filtered.length === 0 && <p style={{ textAlign: "center", color: "var(--color-text-secondary)", marginTop: 40 }}>No items found.</p>}
+            {filtered.length === 0 && <p style={{ textAlign: "center", color: "var(--color-text-secondary)", marginTop: 40, fontSize: fs }}>No items found.</p>}
           </div>
         </>
       )}
 
-      {/* SCAN */}
       {view === "Scan" && (
         <>
           <div style={s.header}>
             <div>
               <p style={s.title}>Scan Product</p>
-              <p style={s.sub}>Use camera or enter barcode manually</p>
+              <p style={s.sub}>Camera or manual entry</p>
             </div>
           </div>
-          <div style={{ margin: "20px 16px 0" }}>
-            <button style={{ ...s.bigBtn, marginTop: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }} onClick={() => { setScanResult(null); setShowCamera(true); }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <div style={{ margin: "24px 20px 0" }}>
+            <button style={{ ...s.bigBtn, marginTop: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }} onClick={() => { setScanResult(null); setShowCamera(true); }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
               Scan with Camera
             </button>
-            <p style={{ textAlign: "center", fontSize: 12, color: "var(--color-text-secondary)", margin: "6px 0 0" }}>Works with UPC, EAN, Code 128 barcodes</p>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0 12px" }}>
+            <p style={{ textAlign: "center", fontSize: 14, color: "var(--color-text-secondary)", margin: "8px 0 0" }}>Works with UPC, EAN, Code 128 barcodes</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 16px" }}>
               <div style={{ flex: 1, height: "0.5px", background: "var(--color-border-tertiary)" }} />
-              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>or enter manually</span>
+              <span style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>or enter manually</span>
               <div style={{ flex: 1, height: "0.5px", background: "var(--color-border-tertiary)" }} />
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 10 }}>
               <input style={s.input} placeholder="Barcode / SKU / product name" value={scanInput} onChange={e => setScanInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleManualSearch()} />
-              <button onClick={handleManualSearch} style={{ padding: "9px 16px", borderRadius: 10, border: "none", background: "#185FA5", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Find</button>
+              <button onClick={handleManualSearch} style={{ padding: "12px 18px", borderRadius: 12, border: "none", background: "#185FA5", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Find</button>
             </div>
-
             {scanResult && !scanResult.notFound && (
-              <div style={{ ...s.card, margin: "14px 0 0", border: "1.5px solid #185FA5" }}>
-                <p style={{ margin: "0 0 2px", fontWeight: 600, fontSize: 16, color: "var(--color-text-primary)" }}>{scanResult.name}</p>
-                <p style={{ margin: "0 0 6px", fontSize: 13, color: "var(--color-text-secondary)" }}>{scanResult.category} · SKU {scanResult.sku}</p>
-                <p style={{ margin: "0 0 12px", fontSize: 13, color: "var(--color-text-secondary)" }}>Current qty: <strong>{scanResult.qty} {scanResult.unit}</strong> · Par: {scanResult.par}</p>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: "#E6F1FB", color: "#185FA5", fontWeight: 600, cursor: "pointer" }} onClick={() => { updateQty(scanResult.id, -1); setScanResult(p => ({ ...p, qty: Math.max(0, p.qty - 1) })); showToast("Qty updated!"); }}>− Remove 1</button>
-                  <button style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: "#185FA5", color: "#fff", fontWeight: 600, cursor: "pointer" }} onClick={() => { updateQty(scanResult.id, 1); setScanResult(p => ({ ...p, qty: p.qty + 1 })); showToast("Qty updated!"); }}>+ Add 1</button>
+              <div style={{ ...s.card, margin: "16px 0 0", border: "2px solid #185FA5" }}>
+                <p style={{ margin: "0 0 4px", fontWeight: 700, fontSize: 18, color: "var(--color-text-primary)" }}>{scanResult.name}</p>
+                <p style={{ margin: "0 0 6px", fontSize: 14, color: "var(--color-text-secondary)" }}>{scanResult.category} · SKU {scanResult.sku}</p>
+                <p style={{ margin: "0 0 14px", fontSize: 15, color: "var(--color-text-secondary)" }}>Qty: <strong>{scanResult.qty} {scanResult.unit}</strong> · Par: {scanResult.par}</p>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button style={{ flex: 1, padding: "13px", borderRadius: 12, border: "none", background: "#E6F1FB", color: "#185FA5", fontWeight: 700, cursor: "pointer", fontSize: 15 }} onClick={() => { updateQty(scanResult.id, -1); setScanResult(p => ({ ...p, qty: Math.max(0, p.qty - 1) })); showToast("Qty updated!"); }}>− Remove 1</button>
+                  <button style={{ flex: 1, padding: "13px", borderRadius: 12, border: "none", background: "#185FA5", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 15 }} onClick={() => { updateQty(scanResult.id, 1); setScanResult(p => ({ ...p, qty: p.qty + 1 })); showToast("Qty updated!"); }}>+ Add 1</button>
                 </div>
               </div>
             )}
             {scanResult && scanResult.notFound && (
-              <div style={{ ...s.card, margin: "14px 0 0", border: "1.5px solid #E24B4A" }}>
-                <p style={{ margin: "0 0 4px", fontWeight: 600, color: "#E24B4A" }}>Product not found</p>
-                <p style={{ margin: "0 0 10px", fontSize: 13, color: "var(--color-text-secondary)" }}>SKU: {scanResult.sku}</p>
+              <div style={{ ...s.card, margin: "16px 0 0", border: "2px solid #E24B4A" }}>
+                <p style={{ margin: "0 0 4px", fontWeight: 700, color: "#E24B4A", fontSize: 17 }}>Product not found</p>
+                <p style={{ margin: "0 0 12px", fontSize: 14, color: "var(--color-text-secondary)" }}>SKU: {scanResult.sku}</p>
                 <button style={{ ...s.bigBtn, marginTop: 0 }} onClick={() => { setShowAddModal(true); setNewItem(n => ({ ...n, sku: scanResult.sku })); }}>Add as New Product</button>
               </div>
             )}
@@ -320,26 +298,25 @@ export default function App() {
         </>
       )}
 
-      {/* ORDER */}
       {view === "Order" && (
         <>
           <div style={s.header}>
             <div>
               <p style={s.title}>Order Sheet</p>
-              <p style={s.sub}>{needsOrder.length} items below par level</p>
+              <p style={s.sub}>{needsOrder.length} items below par</p>
             </div>
           </div>
-          <div style={{ margin: "14px 16px 0" }}>
+          <div style={{ margin: "16px 20px 0" }}>
             <select style={s.formInput} value={orderVendor} onChange={e => setOrderVendor(e.target.value)}>
               <option value="all">All Vendors</option>
               {VENDORS.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
           </div>
           {orderFiltered.length === 0 ? (
-            <div style={{ textAlign: "center", marginTop: 60 }}>
-              <p style={{ fontSize: 40, marginBottom: 8 }}>✓</p>
-              <p style={{ fontWeight: 600, color: "var(--color-text-primary)" }}>All stocked up!</p>
-              <p style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>No items need reordering.</p>
+            <div style={{ textAlign: "center", marginTop: 80 }}>
+              <p style={{ fontSize: 48, marginBottom: 10 }}>✓</p>
+              <p style={{ fontWeight: 700, color: "var(--color-text-primary)", fontSize: 18 }}>All stocked up!</p>
+              <p style={{ fontSize: fs, color: "var(--color-text-secondary)" }}>No items need reordering.</p>
             </div>
           ) : (
             <>
@@ -356,12 +333,12 @@ export default function App() {
                         <div key={item.id} style={s.card}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                             <div>
-                              <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: "var(--color-text-primary)" }}>{item.name}</p>
-                              <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--color-text-secondary)" }}>Have {item.qty} · Par {item.par} {item.unit}</p>
+                              <p style={{ margin: 0, fontWeight: 700, fontSize: 16, color: "var(--color-text-primary)" }}>{item.name}</p>
+                              <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--color-text-secondary)" }}>Have {item.qty} · Par {item.par} {item.unit}</p>
                             </div>
                             <div style={{ textAlign: "right" }}>
-                              <p style={{ margin: 0, fontWeight: 700, fontSize: 18, color }}>{needed}</p>
-                              <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-secondary)" }}>{item.unit} needed</p>
+                              <p style={{ margin: 0, fontWeight: 700, fontSize: 22, color }}>{needed}</p>
+                              <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{item.unit} needed</p>
                             </div>
                           </div>
                         </div>
@@ -370,7 +347,7 @@ export default function App() {
                   </div>
                 );
               })}
-              <div style={{ padding: "0 16px 16px" }}>
+              <div style={{ padding: "0 20px 20px" }}>
                 <button style={s.bigBtn} onClick={exportOrder}>Copy Order to Clipboard</button>
               </div>
             </>
@@ -378,11 +355,10 @@ export default function App() {
         </>
       )}
 
-      {/* VENDORS */}
       {view === "Vendors" && (
         <>
           <div style={s.header}><p style={s.title}>Vendors</p></div>
-          <div style={{ marginTop: 14 }}>
+          <div style={{ marginTop: 16 }}>
             {VENDORS.map(v => {
               const vItems = items.filter(i => i.vendor === v.id);
               const vOrder = needsOrder.filter(i => i.vendor === v.id);
@@ -390,13 +366,13 @@ export default function App() {
                 <div key={v.id} style={s.card}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: 15, color: "var(--color-text-primary)" }}>{v.name}</p>
-                      <p style={{ margin: "3px 0 0", fontSize: 13, color: "var(--color-text-secondary)" }}>{vItems.length} products</p>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: 17, color: "var(--color-text-primary)" }}>{v.name}</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--color-text-secondary)" }}>{vItems.length} products</p>
                     </div>
-                    {vOrder.length > 0 && <span style={{ background: "#FCEBEB", color: "#A32D2D", fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 20 }}>{vOrder.length} to order</span>}
+                    {vOrder.length > 0 && <span style={{ background: "#FCEBEB", color: "#A32D2D", fontSize: 13, fontWeight: 700, padding: "5px 12px", borderRadius: 20 }}>{vOrder.length} to order</span>}
                   </div>
-                  <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {vItems.map(i => <span key={i.id} style={{ fontSize: 12, background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", padding: "3px 10px", borderRadius: 20, border: "0.5px solid var(--color-border-tertiary)" }}>{i.name}</span>)}
+                  <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {vItems.map(i => <span key={i.id} style={{ fontSize: 13, background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", padding: "4px 12px", borderRadius: 20, border: "0.5px solid var(--color-border-tertiary)" }}>{i.name}</span>)}
                   </div>
                 </div>
               );
@@ -405,16 +381,15 @@ export default function App() {
         </>
       )}
 
-      {/* ADD MODAL */}
       {showAddModal && (
         <div style={s.modal} onClick={() => setShowAddModal(false)}>
           <div style={s.modalBox} onClick={e => e.stopPropagation()}>
-            <p style={{ ...s.title, marginBottom: 16 }}>Add Product</p>
+            <p style={{ ...s.title, marginBottom: 20 }}>Add Product</p>
             <label style={s.label}>Product Name</label>
             <input style={s.formInput} placeholder="e.g. Cherry Tomatoes" value={newItem.name} onChange={e => setNewItem(n => ({ ...n, name: e.target.value }))} />
             <label style={s.label}>SKU / Barcode</label>
             <input style={s.formInput} placeholder="e.g. 074175604517" value={newItem.sku} onChange={e => setNewItem(n => ({ ...n, sku: e.target.value }))} />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <label style={s.label}>Category</label>
                 <select style={s.formInput} value={newItem.category} onChange={e => setNewItem(n => ({ ...n, category: e.target.value }))}>
@@ -423,7 +398,7 @@ export default function App() {
               </div>
               <div>
                 <label style={s.label}>Unit</label>
-                <input style={s.formInput} placeholder="lbs, gal, cs..." value={newItem.unit} onChange={e => setNewItem(n => ({ ...n, unit: e.target.value }))} />
+                <input style={s.formInput} placeholder="lbs, gal..." value={newItem.unit} onChange={e => setNewItem(n => ({ ...n, unit: e.target.value }))} />
               </div>
               <div>
                 <label style={s.label}>Current Qty</label>
