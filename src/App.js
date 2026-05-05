@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from “react”;
 
+// Quick test — remove this after confirming it shows
+const TEST_MODE = true;
+
 // ── SUPABASE ─────────────────────────────────────────────────────
 const SB_URL = “https://vkosasytwgyhcxvxiksv.supabase.co/rest/v1”;
 const SB_KEY = “sb_publishable_60HXdM9pOV6u_vFn_LQ2ng_K1Z__Db2”;
@@ -407,21 +410,29 @@ const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null),3000); }
 useEffect(() => {
 const load = async () => {
 try {
-let [v, i] = await Promise.all([
-sb.get(“vendors”,”?order=name”),
-sb.get(“items”,”?order=name”),
-]);
-if (!Array.isArray(v)||!Array.isArray(i)) { setDbError(“Could not connect to database.”); setLoading(false); return; }
-if (!v.length) { await sb.upsert(“vendors”, SEED_VENDORS); v = SEED_VENDORS; }
-if (!i.length) { await sb.upsert(“items”, SEED_ITEMS); i = SEED_ITEMS; }
-setVendors(v);
-setItems(i);
-} catch(e) {
-setDbError(“Database error: “+e.message);
-}
-setLoading(false);
+const vRes = await fetch(`${SB_URL}/vendors?order=name`, { headers: H });
+const vText = await vRes.text();
+if (!vRes.ok) { setDbError(`Vendors error ${vRes.status}: ${vText}`); setLoading(false); return; }
+let v = JSON.parse(vText);
+
+```
+    const iRes = await fetch(`${SB_URL}/items?order=name`, { headers: H });
+    const iText = await iRes.text();
+    if (!iRes.ok) { setDbError(`Items error ${iRes.status}: ${iText}`); setLoading(false); return; }
+    let i = JSON.parse(iText);
+
+    if (!v.length) { await sb.upsert("vendors", SEED_VENDORS); v = SEED_VENDORS; }
+    if (!i.length) { await sb.upsert("items", SEED_ITEMS); i = SEED_ITEMS; }
+    setVendors(v);
+    setItems(i);
+  } catch(e) {
+    setDbError("Network error: " + e.message);
+  }
+  setLoading(false);
 };
 load();
+```
+
 }, []);
 
 const setQty = async (id,qty) => { setItems(p=>p.map(i=>i.id===id?{…i,qty}:i)); await sb.patch(“items”,`?id=eq.${id}`,{qty}); showToast(“Quantity saved!”); };
@@ -435,6 +446,12 @@ const sorted = […items].sort((a,b)=>a.name.localeCompare(b.name));
 const filtered = sorted.filter(i=>(cat===“All”||i.category===cat)&&(i.name.toLowerCase().includes(search.toLowerCase())||(i.sku||””).includes(search)));
 const needsOrder = items.filter(i=>i.qty<i.par);
 const orderFiltered = orderVendor===“all”?needsOrder:needsOrder.filter(i=>i.vendor===orderVendor);
+
+if (TEST_MODE && loading) return (
+<div style={{minHeight:“100vh”, background:“red”, display:“flex”, alignItems:“center”, justifyContent:“center”}}>
+<p style={{color:”#fff”, fontSize:40, fontWeight:800}}>APP IS LOADING</p>
+</div>
+);
 
 if (loading) return (
 <div style={{minHeight:“100vh”,display:“flex”,flexDirection:“column”,alignItems:“center”,justifyContent:“center”,fontFamily:“system-ui,sans-serif”,gap:24}}>
